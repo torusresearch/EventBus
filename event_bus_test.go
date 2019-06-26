@@ -15,7 +15,7 @@ func TestNew(t *testing.T) {
 
 func TestHasCallback(t *testing.T) {
 	bus := New()
-	bus.Subscribe("topic", func() {})
+	bus.Subscribe("topic", func(interface{}) {})
 	if bus.HasCallback("topic_topic") {
 		t.Fail()
 	}
@@ -26,20 +26,14 @@ func TestHasCallback(t *testing.T) {
 
 func TestSubscribe(t *testing.T) {
 	bus := New()
-	if bus.Subscribe("topic", func() {}) != nil {
-		t.Fail()
-	}
-	if bus.Subscribe("topic", "String") == nil {
+	if bus.Subscribe("topic", func(interface{}) {}) != nil {
 		t.Fail()
 	}
 }
 
 func TestSubscribeOnce(t *testing.T) {
 	bus := New()
-	if bus.SubscribeOnce("topic", func() {}) != nil {
-		t.Fail()
-	}
-	if bus.SubscribeOnce("topic", "String") == nil {
+	if bus.SubscribeOnce("topic", func(interface{}) {}) != nil {
 		t.Fail()
 	}
 }
@@ -48,11 +42,11 @@ func TestSubscribeOnceAndManySubscribe(t *testing.T) {
 	bus := New()
 	event := "topic"
 	flag := 0
-	fn := func() { flag += 1 }
+	fn := func(interface{}) { flag += 1 }
 	bus.SubscribeOnce(event, fn)
 	bus.Subscribe(event, fn)
 	bus.Subscribe(event, fn)
-	bus.Publish(event)
+	bus.Publish(event, nil)
 
 	if flag != 3 {
 		t.Fail()
@@ -61,7 +55,7 @@ func TestSubscribeOnceAndManySubscribe(t *testing.T) {
 
 func TestUnsubscribe(t *testing.T) {
 	bus := New()
-	handler := func() {}
+	handler := func(interface{}) {}
 	bus.Subscribe("topic", handler)
 	if bus.Unsubscribe("topic", handler) != nil {
 		t.Fail()
@@ -71,26 +65,38 @@ func TestUnsubscribe(t *testing.T) {
 	}
 }
 
+type AB struct {
+	A int
+	B int
+}
+
 func TestPublish(t *testing.T) {
 	bus := New()
-	bus.Subscribe("topic", func(a int, b int) {
-		if a != b {
+	bus.Subscribe("topic", func(ab interface{}) {
+		abstruct := ab.(AB)
+		if abstruct.A != abstruct.B {
 			t.Fail()
 		}
 	})
-	bus.Publish("topic", 10, 10)
+	bus.Publish("topic", AB{A:1, B:1})
+}
+
+type AOUT struct {
+	A int
+	Out *[]int
 }
 
 func TestSubcribeOnceAsync(t *testing.T) {
 	results := make([]int, 0)
 
 	bus := New()
-	bus.SubscribeOnceAsync("topic", func(a int, out *[]int) {
-		*out = append(*out, a)
+	bus.SubscribeOnceAsync("topic", func(aout interface{}) {
+		aoutstruct := aout.(AOUT)
+		*aoutstruct.Out = append(*aoutstruct.Out, aoutstruct.A)
 	})
 
-	bus.Publish("topic", 10, &results)
-	bus.Publish("topic", 10, &results)
+	bus.Publish("topic", AOUT{A:10, Out: &results})
+	bus.Publish("topic", AOUT{A:10, Out: &results})
 
 	bus.WaitAsync()
 
@@ -103,18 +109,25 @@ func TestSubcribeOnceAsync(t *testing.T) {
 	}
 }
 
+type AOUTDUR struct {
+	A int
+	Out *[]int
+	Dur string
+}
+
 func TestSubscribeAsyncTransactional(t *testing.T) {
 	results := make([]int, 0)
 
 	bus := New()
-	bus.SubscribeAsync("topic", func(a int, out *[]int, dur string) {
-		sleep, _ := time.ParseDuration(dur)
+	bus.SubscribeAsync("topic", func(aoutdur interface{}) {
+		aoutdurstruct := aoutdur.(AOUTDUR)
+		sleep, _ := time.ParseDuration(aoutdurstruct.Dur)
 		time.Sleep(sleep)
-		*out = append(*out, a)
+		*aoutdurstruct.Out = append(*aoutdurstruct.Out, aoutdurstruct.A)
 	}, true)
 
-	bus.Publish("topic", 1, &results, "1s")
-	bus.Publish("topic", 2, &results, "0s")
+	bus.Publish("topic", AOUTDUR{1, &results, "1s"})
+	bus.Publish("topic", AOUTDUR{2, &results, "0s"})
 
 	bus.WaitAsync()
 
@@ -127,16 +140,22 @@ func TestSubscribeAsyncTransactional(t *testing.T) {
 	}
 }
 
+type AOUTCH struct {
+	A int
+	Out chan<- int
+}
+
 func TestSubscribeAsync(t *testing.T) {
 	results := make(chan int)
 
 	bus := New()
-	bus.SubscribeAsync("topic", func(a int, out chan<- int) {
-		out <- a
+	bus.SubscribeAsync("topic", func(aoutch interface{}) {
+		aoutchstruct := aoutch.(AOUTCH)
+		aoutchstruct.Out <- aoutchstruct.A
 	}, false)
 
-	bus.Publish("topic", 1, results)
-	bus.Publish("topic", 2, results)
+	bus.Publish("topic", AOUTCH{1, results})
+	bus.Publish("topic", AOUTCH{2, results})
 
 	numResults := 0
 

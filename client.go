@@ -16,7 +16,7 @@ const (
 
 // ClientArg - object containing event for client to publish locally
 type ClientArg struct {
-	Args  []interface{}
+	Data  interface{}
 	Topic string
 }
 
@@ -43,7 +43,7 @@ func (client *Client) EventBus() Bus {
 	return client.eventBus
 }
 
-func (client *Client) doSubscribe(topic string, fn interface{}, serverAddr, serverPath string, subscribeType SubscribeType) {
+func (client *Client) doSubscribe(topic string, fn func(interface{}), serverAddr, serverPath string, subscribeType SubscribeType) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Server not found -", r)
@@ -67,12 +67,12 @@ func (client *Client) doSubscribe(topic string, fn interface{}, serverAddr, serv
 }
 
 //Subscribe subscribes to a topic in a remote event bus
-func (client *Client) Subscribe(topic string, fn interface{}, serverAddr, serverPath string) {
+func (client *Client) Subscribe(topic string, fn func(interface{}), serverAddr, serverPath string) {
 	client.doSubscribe(topic, fn, serverAddr, serverPath, Subscribe)
 }
 
 //SubscribeOnce subscribes once to a topic in a remote event bus
-func (client *Client) SubscribeOnce(topic string, fn interface{}, serverAddr, serverPath string) {
+func (client *Client) SubscribeOnce(topic string, fn func(interface{}), serverAddr, serverPath string) {
 	client.doSubscribe(topic, fn, serverAddr, serverPath, SubscribeOnce)
 }
 
@@ -88,8 +88,8 @@ func (client *Client) Start() error {
 		if err == nil {
 			service.wg.Add(1)
 			service.started = true
-			go http.Serve(l, nil)	
-		}	
+			go http.Serve(l, nil)
+		}
 	} else {
 		err = errors.New("Client service already started")
 	}
@@ -114,7 +114,7 @@ type ClientService struct {
 
 // PushEvent - exported service to listening to remote events
 func (service *ClientService) PushEvent(arg *ClientArg, reply *bool) error {
-	service.client.eventBus.Publish(arg.Topic, arg.Args...)
+	service.client.eventBus.Publish(arg.Topic, arg.Data)
 	*reply = true
 	return nil
 }

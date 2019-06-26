@@ -44,13 +44,13 @@ func TestRegister(t *testing.T) {
 func TestPushEvent(t *testing.T) {
 	clientBus := NewClient("localhost:2015", "/_client_bus_", New())
 
-	eventArgs := make([]interface{}, 1)
-	eventArgs[0] = 10
+	eventArgs := 10
 
 	clientArg := &ClientArg{eventArgs, "topic"}
 	reply := new(bool)
 
-	fn := func(a int) {
+	fn := func(inter interface{}) {
+		a := inter.(int)
 		if a != 10 {
 			t.Fail()
 		}
@@ -67,7 +67,8 @@ func TestServerPublish(t *testing.T) {
 	serverBus := NewServer(":2020", "/_server_bus_b", New())
 	serverBus.Start()
 
-	fn := func(a int) {
+	fn := func(inter interface{}) {
+		a := inter.(int)
 		if a != 10 {
 			t.Fail()
 		}
@@ -91,7 +92,8 @@ func TestNetworkBus(t *testing.T) {
 	networkBusB := NewNetworkBus(":2030", "/_net_bus_B")
 	networkBusB.Start()
 
-	fnA := func(a int) {
+	fnA := func(inter interface{}) {
+		a := inter.(int)
 		if a != 10 {
 			t.Fail()
 		}
@@ -99,7 +101,8 @@ func TestNetworkBus(t *testing.T) {
 	networkBusA.Subscribe("topic-A", fnA, ":2030", "/_net_bus_B")
 	networkBusB.EventBus().Publish("topic-A", 10)
 
-	fnB := func(a int) {
+	fnB := func(inter interface{}) {
+		a := inter.(int)
 		if a != 20 {
 			t.Fail()
 		}
