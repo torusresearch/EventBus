@@ -65,6 +65,18 @@ func TestUnsubscribe(t *testing.T) {
 	}
 }
 
+func TestUnsubscribeAll(t *testing.T) {
+	bus := New()
+	handler := func(interface{}) {}
+	bus.Subscribe("topic", handler)
+	if bus.UnsubscribeAll("topic") != nil {
+		t.Fail()
+	}
+	if bus.UnsubscribeAll("topic") == nil {
+		t.Fail()
+	}
+}
+
 type AB struct {
 	A int
 	B int
@@ -78,11 +90,11 @@ func TestPublish(t *testing.T) {
 			t.Fail()
 		}
 	})
-	bus.Publish("topic", AB{A:1, B:1})
+	bus.Publish("topic", AB{A: 1, B: 1})
 }
 
 type AOUT struct {
-	A int
+	A   int
 	Out *[]int
 }
 
@@ -95,8 +107,8 @@ func TestSubcribeOnceAsync(t *testing.T) {
 		*aoutstruct.Out = append(*aoutstruct.Out, aoutstruct.A)
 	})
 
-	bus.Publish("topic", AOUT{A:10, Out: &results})
-	bus.Publish("topic", AOUT{A:10, Out: &results})
+	bus.Publish("topic", AOUT{A: 10, Out: &results})
+	bus.Publish("topic", AOUT{A: 10, Out: &results})
 
 	bus.WaitAsync()
 
@@ -110,7 +122,7 @@ func TestSubcribeOnceAsync(t *testing.T) {
 }
 
 type AOUTDUR struct {
-	A int
+	A   int
 	Out *[]int
 	Dur string
 }
@@ -141,7 +153,7 @@ func TestSubscribeAsyncTransactional(t *testing.T) {
 }
 
 type AOUTCH struct {
-	A int
+	A   int
 	Out chan<- int
 }
 

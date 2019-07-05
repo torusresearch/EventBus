@@ -13,6 +13,7 @@ type BusSubscriber interface {
 	SubscribeOnce(topic string, fn func(interface{})) error
 	SubscribeOnceAsync(topic string, fn func(interface{})) error
 	Unsubscribe(topic string, handler func(interface{})) error
+	UnsubscribeAll(topic string) error
 }
 
 //BusPublisher defines publishing-related bus behavior
@@ -119,6 +120,18 @@ func (bus *EventBus) Unsubscribe(topic string, handler func(interface{})) error 
 	defer bus.lock.Unlock()
 	if _, ok := bus.handlers[topic]; ok && len(bus.handlers[topic]) > 0 {
 		bus.removeHandler(topic, bus.findHandlerIdx(topic, handler))
+		return nil
+	}
+	return fmt.Errorf("topic %s doesn't exist", topic)
+}
+
+func (bus *EventBus) UnsubscribeAll(topic string) error {
+	bus.lock.Lock()
+	defer bus.lock.Unlock()
+	if _, ok := bus.handlers[topic]; ok && len(bus.handlers[topic]) > 0 {
+		for i := 0; i < len(bus.handlers[topic]); i++ {
+			bus.removeHandler(topic, i)
+		}
 		return nil
 	}
 	return fmt.Errorf("topic %s doesn't exist", topic)
